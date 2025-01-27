@@ -45,9 +45,9 @@
   \vspace*{5mm}
   \begin{center}
     \vspace{-30truemm}
-    \LARGE{令和5年度　卒業論文}\\
+    \LARGE{令和6年度　卒業論文}\\
     \vspace{20truemm}
-    {\fontsize{26pt}{0pt} \selectfont \textbf{高難易度アクションゲームにおける人間らしいAI}}
+    {\fontsize{26pt}{0pt} \selectfont \textbf{高難易度アクションゲームに\hspace{10mm}おける人間らしいAI}}
 
 
     \vspace{50truemm}
@@ -63,7 +63,7 @@
           \vspace{5truemm} \\
           主任指導教員&:清雄一　教授 \\%（直属の人が一番上）
           指導教員&:田原康之　准教授\\
-          提出年月日&:2024 年 mm 月 dd日(月) \\
+          提出年月日&:2025 年 mm 月 dd日(月) \\
         \end{split}
       \end{equation*}
     \normalsize
@@ -146,8 +146,12 @@ AIの研究\cite{morita}\cite{tutii}
 
 \section{論文の構成}
 %TODO:
-本論文は第1章から第何章で構成されている．
-第2章では関連研究
+本論文は第1章から第7章で構成されている．第2章で関連研究，
+第3章でオリジナル高難易度アクションゲームについて，
+第4章で強化学習の詳細，生物学的制約の検討と導入，
+第5章で実験，第6章で考察，第7章で本研究のまとめ，
+今後の展望について記す．
+
 
 \newpage
 
@@ -208,50 +212,29 @@ AIの研究\cite{morita}\cite{tutii}
 
 
  本研究で扱う環境は，実際に発売されている
- 高難易度アクションゲームを参考に，筆者がUnityで作成した
+ 高難易度アクションゲームを参考に，筆者がUnity\cite{unity}で作成した
  3Dアクションゲームである．
  
  \section{ゲームの要件}
  高難易度アクションゲームの要件は\ref{teigi}節のもの
- を参考に以下のように定めた．
- {
- \begin{itemize}[itemsep=1pt, leftmargin=27pt, labelsep=5pt, parsep=0pt]
-   \item ステータスが高い(HP，攻撃力等)
-   \item 常時スーパーアーマー(攻撃を受けても行動が中断されない)
-   \item 回復を阻害してくる(回復中に攻撃してくる，
-   遠距離からの攻撃)
-   \item ディレイのかかった一撃で瀕死となる攻撃
-   \item 攻撃範囲が広い
- \end{itemize}
- }
+ を参考にし，一部変更を加えた．
+ 変更点として，常時スーパーアーマー，
+ 回復を阻害する遠距離からの攻撃，
+ ディレイのかかった一撃で瀕死となる攻撃，
+ 盾を使用しないを加えた．
  
- \section{基本操作}
- 基本操作は以下の行動を可能とした．
- {
- \begin{itemize}[itemsep=1pt, leftmargin=27pt, labelsep=5pt, parsep=0pt]
-   \item 右手の剣を使った攻撃(連続で攻撃を入力すると派生攻撃が出る)
-   \item 左手の盾を構えてガード(ガード時にスタミナが0になるとのけぞる)
-   \item 転がりながらの回避(直後に攻撃を入力すると派生攻撃が出る)
-   \item バックステップ(移動入力がニュートラルの状態で回避を入力)
-   \item アイテムを使った回復
- \end{itemize}
- }
- 
- 探索や索敵などには焦点を当てず，戦闘のみの学習を行うため，
- 常時敵をロックオンしている状態とした．
- 
- \section{環境・パラメータ}
+ \section{環境}
  実験環境は図\ref{kankyou}で表す．30*30のフィールドに操作
  可能なPlayerとフローチャートを元に実装したEnemyのみを
  配置し，PlayerかEnemyのHPが0になった時点で1ゲームが終了する．
- PlayerのHPは100，EnemyのHPは300，
- Playerのスタミナは150,回復回数は3回，
- 一度の回復で60のHPを回復する．
- 
+ Enemyはゲーム開始時，フィールドの4隅からランダムに出現する．
+ 探索や索敵などには焦点を当てず，戦闘のみの学習を行うため，
+ Playerは常時Enemyをロックオンしている状態とした．
+
  
  \begin{figure}[h]
    \begin{center}
-     \includegraphics[width=8.4cm]{ActionGameImage.png}
+     \includegraphics[width=9cm]{ActionGameImage.png}
      \caption{高難易度アクションゲーム環境}
      \label{kankyou}
    \end{center}
@@ -261,9 +244,74 @@ AIの研究\cite{morita}\cite{tutii}
  Player，EnemyそれぞれのHPとPlayerのスタミナをバーによって
  表示し，残りの回復数と使用している武器の情報を画面左下に表示した．
  
+ \section{アニメーションの作成}
+ アニメーションはUnityのPackageである
+ Animation Rigging\cite{AnimRigging}を使用して作成した．
+ 図\ref{anim_controller}のように頭，首，手首，肘，胴体，腰，足
+ のボーンと連動して動くコントローラーを設定し，アニメーションを作成した．
+ PlayerとEnemyのアニメーションを付録Aに掲載する．
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=9cm]{Rigging.png}
+    \caption{Playerのアニメーションコントローラー}
+    \label{anim_controller}
+  \end{center}
+\end{figure}
+
+ \section{Playerの実装}
+ Playerの基本操作は以下の行動を可能とした．
+ {
+ \begin{itemize}[itemsep=1pt, leftmargin=27pt, labelsep=5pt, parsep=0pt]
+   \item Attack1: 右手の剣を使った攻撃
+   \item Attack2: 攻撃の直後，連続で入力した際に行う連続攻撃
+   \item Guard: 左手の盾を構えてガード
+   \item GuardKnockBack: ガード状態で攻撃を受けたときのけぞる
+   \item HitKnockBack: ガードしていない状態で攻撃を受けたときのけぞる
+   \item GuardBreak: ガード時にスタミナが0の場合，体勢を崩す
+   \item Rolling: 転がりながらの回避
+   \item RollingAttack: 回避直後に攻撃を入力した際に行う派生攻撃
+   \item BackStep: 移動入力がニュートラルの状態で回避を入力
+   \item Heal: アイテムを使った回復
+   \item Walk: 移動
+ \end{itemize}
+ }
+ それぞれの行動が消費するスタミナと与えるダメージ
+ を表\ref{Action_Stamina_Damage}に示す．
+Attack1，Attack2，GuardBreak，Heal，Walkは
+攻撃を受けたとき，行動が中断されてHitKnockBack状態となる．
+
+HPは100，スタミナは150,回復は3回まで可能とし，
+一度の回復で60のHPを回復する．スタミナは通常状態で毎フレーム0.2回復し，
+ガード状態では毎フレーム0.1回復する．
+
+ \begin{table}[!ht]
+  \centering
+  \caption{行動に消費するスタミナと与えるダメージ}
+  \label{Action_Stamina_Damage}
+  \begin{tabular}{c|c|c}    
+  \hline
+      行動 & 消費するスタミナ & 与えるダメージ \\ \hline
+      Attack1 & 20 & 20 \\ \hline
+      Attack2 & 25 & 30 \\ \hline
+      Guard & 0 & - \\ \hline
+      GuardKnockBack & ガードした攻撃のダメージ値 *1.2 & - \\ \hline
+      HitKnockBack & 0 & - \\ \hline
+      GuardBreak & 0& - \\ \hline
+      Rolling & 20 & - \\ \hline
+      RollingAttack & 25 & 15 \\ \hline
+      BackStep& 20 & - \\ \hline
+      Heal & 0 & - \\ \hline
+      Walk& 0 & - \\ \hline
+  \end{tabular}
+\end{table}
+
+
  
+ \newpage
  
  \section{Enemyの実装}
+ EnemyはHPを500とし，高難易度アクションゲームのボスを
+ 想定しているためスタミナは使用しない．
  戦闘のみの学習を行うため，Enemyはあらかじめ
  Playerを発見している状態とした．
  Enemyは距離によって行動の選択肢を分け，その中から
@@ -272,11 +320,26 @@ AIの研究\cite{morita}\cite{tutii}
  
  \begin{figure}[h]
    \begin{center}
-     \includegraphics[width=9cm]{action_choice.png}
+     \includegraphics[width=11.5cm]{action_choice_E.png}
      \caption{Enemyの行動選択肢}
      \label{action_choice}
    \end{center}
  \end{figure}
+ それぞれの行動の詳細を以下に示す．与えるダメージを括弧内に示す．
+ {
+  \begin{itemize}[itemsep=1pt, leftmargin=27pt, labelsep=5pt, parsep=0pt]
+    \item WeakAttack123: 出が早い3回の連続攻撃．(15,20,30)
+    \item WeakAttack45: 2回の連続攻撃，WeakAttack123と比べて攻撃後の隙が長い．(15,30)
+    \item StrongAttack1: 単発の刺突攻撃，WeakAttackと比べて攻撃後の隙が長い．(30)
+    \item StrongAttack2: 予備動作と攻撃後の隙が最も長く，威力も最も高い攻撃．
+          武器の当たり判定に加えて地面にガード不可能の衝撃波を出す．(20,40)
+    \item KeepDistance: Playerから距離を取る．
+    \item RushAttack: 予備動作の後突進する攻撃．(30)
+    \item Roaming: 辺りを彷徨く．
+    \item ShootAttack: 空中に浮遊した後，Playerに向かって3回玉を飛ばす攻撃．(20)
+  \end{itemize}
+  }
+
  
  Enemyのフローチャートを図\ref{enemy_huro}に示す．Enemy
  はゲームが始まるとPlayerに近づき，近距離行動の範囲
@@ -285,11 +348,12 @@ AIの研究\cite{morita}\cite{tutii}
  
  \begin{figure}[h]
    \begin{center}
-     \includegraphics[width=8cm]{enemy_huro.png}
+     \includegraphics[width=13cm]{enemy_huro.png}
      \caption{Enemyのフローチャート}
      \label{enemy_huro}
    \end{center}
  \end{figure}
+
 
 \chapter{提案手法}
  \thispagestyle{fancy}
@@ -353,17 +417,52 @@ AIの研究\cite{morita}\cite{tutii}
    \item ゆらぎ(見間違い・操作ミスなど): 人間プレイヤは
    全ての情報を正確に捉えることは不可能であり，また常に正確な操作をすること
    も不可能である．これを再現するためにゲームAIが観測する情報に対してガウスノイズ
-   を付与した．
+   を付与した．ガウスノイズは正規分布に従う乱数をボックス＝ミュラー法
+   により取得することで実現した．ボックス＝ミュラー法は$(0,1]$
+   の範囲を取る乱数をX,Y,標準偏差を$\sigma$としたとき，
+   (\ref{box_mular_1})(\ref{box_mular_2})
+   式で正規分布に従う
+   1組の乱数($Z_1,Z_2$)が生成される．
+   \vspace{-0.7cm}
+   \begin{center}
+   \large
+   \begin{align}\label{box_mular_1}
+   Z_1 = \sigma \sqrt{-2 \log X} cos(2\pi Y)\\
+   Z_2 = \sigma \sqrt{-2 \log X} sin(2\pi Y)\label{box_mular_2}
+   \end{align}
+   \normalsize
+   \end{center}
+   \vspace{0.3cm}
+   $\sigma$の値を0とし，得られた
+   ($Z_1,Z_2$)を交互に観察値に加えることで「ゆらぎ」を表現した．   
+
    \item 遅れ(人間の反射神経): 人間プレイヤは観察した情報
    から実際に操作を行うまでに遅れが発生する．これを再現するために
    アクション決定間隔を数フレーム遅延させた．
    \item 疲れ(キー操作によるもの): 人間プレイヤはコントローラを
    操作することにより疲れが生じ，徐々にパフォーマンスが低下する．
-   これを再現するために，キー操作の変更ごとに「ゆらぎ」，「遅れ」の
-   パラメータの上昇を行った．
+   これを再現するために，疲れの値によって「ゆらぎ」と「遅れ」の
+   パラメーターが変化するようにした．
+   キー操作の変更ごとに
+   $[0,20]$の範囲を取る疲れの値$t$を0.03増加させ，
+   $t$の値を0.01倍した値を「遅れ」に加えた．   
+   「ゆらぎ」は(\ref{box_mular_1})(\ref{box_mular_2})式
+   の$\sigma$に対して$t$を0.05倍した値を加えた．
+   よって式は次のようになる．
+   \vspace{-0.7cm}
+   \begin{center}
+   \large
+   \begin{align}\label{box_mular_3}
+   Z_1 = (\sigma + 0.05t) \sqrt{-2 \log X} cos(2\pi Y)\\
+   Z_2 = (\sigma + 0.05t) \sqrt{-2 \log X} sin(2\pi Y)\label{box_mular_4}
+   \end{align}
+   \normalsize
+   \end{center}
+   \vspace{0.3cm}
+
    \item 油断: 人間プレイヤは順調にプレイができているときに
    注意が疎かになり，いつもとは違う行動をとってしまう．これを再現するために
-   Playerが一定時間ダメージを受けていない状態でEnemyに攻撃が成功したときから
+   Playerが10秒間ダメージを受けていない状態でEnemyに攻撃が成功したときから
    次にPlayerがダメージを受けるまでの間を油断状態とし，油断状態では
    ランダム行動の選択確率を$5\%$上昇させた．
    また，ランダム行動時に何もしないダミーの選択肢を混ぜた．
@@ -386,44 +485,60 @@ AIの研究\cite{morita}\cite{tutii}
  以下のような理由で採用する．
  
  \begin{enumerate}
-   \item 緊張: 緊張はストレス反応の一種であり，人間は
-         ストレスや
-         プレッシャーがかかると前頭前野の機能が低下し，
-         普段しない行動をしてしまうことがある．
-         スポーツの分野ではクライマックスシーンで
-         非合理的な行動をすることがみられる．
-         ゲームも同様に勝敗が決定するような場面では，普段しない
-         行動をとってしまうと考えられるため採用した．
- 
-         %スポーツ心理学の分野では競技のクライマックスシーン
-         %での非合理な行動　TODO:ここら辺の論文探したい
-   \item 節約: 人間の行動における心理的バイアス
-         の一つに保有効果(Endowment effect)があり，所有している
-         ものに対して，そのものの性質だけでなく，所有する
-         ことによって得られる精神的な報酬にも価値を見出すというものである．
-         この現象はゲームにおいても有効であり，貴重なアイテム
-         を使わず，最後まで温存するラストエリクサー症候群
-         と呼ばれるものがある．
-         よって高難易度アクションゲームにおいても
-         回復薬などのアイテムやスタミナなどの
-         後に必要となるかもしれないものを温存する行動が
-         人間らしさに繋がると考え採用した．
- 
- 
-   \item リスク回避: 
-         人間は危険が迫ると扁桃体が活性化され，
-         回避行動が促進されると言われている．また，
-         危機的状況に陥ると，損失回避バイアスが
-         働きやすくなると言われていて，利益を得る行動
-         よりも損失を避ける行動が優先される．
-         
-         HPやスタミナが少ない状態の場合，敵から
-         すぐに離れ，一度状況を立て直すプレイヤがみられるため．
-         
- \end{enumerate}
- 
- 
- \section{新しい生物学的制約の導入}
+  \item 緊張: 緊張はストレス反応の一種であり，人間は
+        ストレスや
+        プレッシャーがかかると前頭前野の機能が低下し，
+        普段しない行動をしてしまうことやミスが増加することがある．
+        スポーツの分野ではクライマックスシーンで
+        非合理的な行動をすることやプレイの精度が低下することがある．
+        長谷川らの研究により，ゴルフプレイヤはプレッシャー下において
+        パフォーマンスが低下することが確認された\cite{stress}．
+        高難易度アクションゲームも同様に勝敗が決定するような場面では，
+        パフォーマンスが低下し，普段しない
+        行動をとってしまうと考えられるため採用した．
+
+
+        %スポーツ心理学の分野では競技のクライマックスシーン
+        %での非合理な行動　TODO:ここら辺の論文探したい
+  \item 節約: 人間の行動における心理的バイアス
+        の一つに保有効果(Endowment effect)があり，所有している
+        ものに対して，そのものの性質だけでなく，所有する
+        ことによって得られる精神的な報酬にも価値を見出すというものである．
+        大橋の研究により，シャープペンシルやマグカップの取引において保有効果
+        が示された\cite{hoyuu}．
+        この現象はゲームにおいても有効であり，貴重なアイテム
+        を使わず，最後まで温存するラストエリクサー症候群
+        と呼ばれるものがある．
+        よって高難易度アクションゲームにおいても
+        回復薬などのアイテムやスタミナなどの
+        後に必要となるかもしれないものを温存する行動が
+        人間らしさに繋がると考え採用した．
+
+
+  \item リスク回避: 
+        人間は危険が迫ると扁桃体が活性化され，
+        回避行動が促進されると言われている．また，
+        危機的状況に陥ると，損失回避バイアスが
+        働き，利益を得る行動
+        よりも損失を避ける行動が優先される．
+        よって高難易度アクションゲームにおいても
+        ダメージを受け瀕死状態にいるときに危険
+        を回避する行動が人間らしさに繋がると考え採用した．
+        
+\end{enumerate}
+先行研究\cite{morita}
+のゲームと高難易度アクションゲームには相違点があり，それは
+HPやスタミナなどのステータス，攻撃，防御，回避などの
+行動から生まれる戦闘の駆け引きである．
+「緊張」「リスク回避」は戦闘の駆け引きから生じる人間の心情の変化
+を表すことができ，「節約」はステータスやアイテムの使い方
+に制約をかけることで，
+人間らしくすることができると考えた．
+よって，以上の3つの生物学的制約を加えることで，
+高難易度アクションゲームに対応した人間らしいAIが生成できると考えた．
+
+
+\section{新しい生物学的制約の導入}
  「緊張」「節約」「リスク回避」は次のように導入した．
  \begin{enumerate}
    \item 緊張: PlayerかEnemyのHPが30以下のときに緊張状態とし，
@@ -462,15 +577,15 @@ AIの研究\cite{morita}\cite{tutii}
  それぞれのプレイ映像は「疲れ」の影響がわかりやすくするため，
  10ゲームの後半1分程度をトリミングした．
  
- 被験者実験は以下の流れで行う．最初に著者がプレイしている
- 1分程度の映像を見せ，人間が高難易度アクションゲームをプレイしている
- イメージを被験者に持たせる．
- このプレイ映像では高難易度アクションゲームの攻略において有効とされる，スタミナの
- 管理をしてスタミナをできるだけ枯渇しないようにすること，
- 間合いの管理をして攻撃を回避すること，
- 敵から離れたときまたは隙が生まれたときに回復すること，
- ガードよりも回避を優先すること
- を意識した．
+ このプレイ映像では高難易度アクションゲームの攻略
+ において有効とされる戦略\cite{fam_kouryaku}の内,
+ 作成した高難易度アクションゲームに適応できる次のことを意識した．
+ \begin{enumerate}
+   \item スタミナの管理をしてスタミナをできるだけ枯渇しないようにすること
+   \item 攻撃よりも防御を優先すること
+   \item 間合いの管理をして敵の攻撃を誘うこと
+   \item 敵の攻撃をガードもしくは回避して，その隙に攻撃をすること
+ \end{enumerate}
  
  次に被験者にあらかじめ録画された9つのゲームAIまたは人間のプレイ映像
  を見てもらい，7段階で2つの質問「このゲームAIは人間らしい動きをしているか」
@@ -629,10 +744,17 @@ AIの研究\cite{morita}\cite{tutii}
 人間らしさを感じる可能性がある．
 実際に表\ref{kekka}ではゲームスキルと人間らしさの評価は
 比例傾向にある．
-ゲームスキルの高さと人間らしさが比例する場合，
-生物学的制約によって弱くなるよう学習させる方法は
-適しておらず，ゲームスキルを高めることだけに焦点
-を当てた方が，結果的に人間らしいと評価される可能性がある．
+このことからゲームスキルを今回の結果より伸ばすことができれば，
+人間らしさの更なる向上が期待できる．
+ゲームスキル向上方法として報酬の調整や学習方法の変更だけでなく，
+作成した高難易度アクションゲームの再現度を高めることが挙げられる．
+実験した環境において，人間がプレイした場合でもスタミナが
+枯渇しやすいという問題があり，
+状態遷移の不具合により，
+ガードをしていない状態でもガード状態のスタミナ回復速度が参照されているケースが
+散見された．
+このような不具合を発見・解消することで今回の結果よりも安定した学習をすることが
+できるようになり，プレイスキルの向上が見込める．
 
 
 
@@ -644,21 +766,31 @@ AIの研究\cite{morita}\cite{tutii}
 \section{実験の方法}
 最後に実験の方法について考察する．本研究では，
 被験者実験による主観評価実験によって人間らしさを評価したが，
-被験者ごとに感じ方がそれぞれ違うため，被験者実験によって
-結果が大きく異なってしまう可能性があり，
-説得力が低い結果であるという問題が生じる．
-この問題を解決するためには人間らしさを定量的に
-定義して，実験を行う必要があるが，人間らしさは
-曖昧さを常に含むものであり，定量的に見ることは難しい．
+被験者ごとに感じ方がそれぞれ違うため，結果が大きく異なった．
+人間らしさを定量的に定義して実験を行うことが望ましいが，
+人間らしさは曖昧さを含むものであり，定量的に見ることは難しい．
 実際に先行研究においても，本研究と同様に，被験者実験
-のみを採用している．人間らしさを定量的に定義し，
-評価できるようになれば，評価の信憑性が増し，
-人間らしいAIの分野の大きな貢献となるだろうと思われる．
+のみを採用している．
+よって被験者によって生じる差を縮めるアプローチが現実的である．
+今回の実験では高難易度アクションゲームをプレイしたことがない人が
+被験者の半数を占めており，プレイしたことがある人の評価と
+差があった．被験者の条件を高難易度アクションゲームを10時間
+以上プレイしたことがあるなど定めることで評価の精度が高まるだろう．
+
+%この問題を解決するためには人間らしさを定量的に
+%定義して，実験を行う必要があるが，人間らしさは
+%曖昧さを常に含むものであり，定量的に見ることは難しい．
+%人間らしさを定量的に定義し，
+%評価できるようになれば，評価の信憑性が増し，
+%人間らしいAIの分野の大きな貢献となるだろうと思われる．
 
 本研究では，「疲れ」を考慮し，10ゲームの後半1分を
 トリミングした映像を被験者に見せたが，
 トリミングした部分によってAIの動作は異なるため，
-感じ方も異なる可能性があり，評価の説得力は低い．
+感じ方も異なる可能性がある．
+評価の精度を高めるため，
+被験者の負担を考慮しつつ，
+より長い時間のプレイ映像を見せることが望ましい．
 
 
 \chapter{おわりに}
@@ -673,9 +805,10 @@ AIの研究\cite{morita}\cite{tutii}
 動きをしたゲームAIの実現ができるか検証した．
 「ゆらぎ」「遅れ」「疲れ」「油断」に新しく「緊張」
 「節約」「リスク回避」の生物学制約を加えることによって，
-人間らしさの評価は高くなったが，人間によるプレイと比較すると
-評価の差は大きく，スタミナの管理や間合いの管理をできていない
-などの機械的な挙動が目立ち，プレイヤスキルの観点でも劣っている．
+人間らしさの評価は高くなった．
+人間によるプレイと比較すると評価の差は大きいが，
+スタミナの管理や間合いの管理をできていない
+などの機械的な挙動を改善をすることで，人間らしさの向上が期待できる．
 
 \section{今後の展望}
 今後の課題はゲームスキルの向上である．
@@ -683,8 +816,9 @@ AIの研究\cite{morita}\cite{tutii}
 人間らしさに関係していると考えられ，
 高いゲームスキルを持つAIに対して生物学的制約を
 加えたものと，加えてないものを比較する必要がある．
-ゲームスキルの向上方法として，報酬の見直しや
-学習方法の変更があり，さらなる検討が必要である．
+ゲームスキルを高める方法として，報酬の見直し，
+学習方法の変更，高難易度アクションゲームの再現度向上があり，
+さらなる検討が必要である．
  
 
 
@@ -697,7 +831,127 @@ AIの研究\cite{morita}\cite{tutii}
 \lhead{\leftmark}
 \rhead{\thepage}
 \renewcommand{\headrulewidth}{1pt}
-本文
+
+本研究を進めるにあたって，研究テーマについての相談や1
+年間素晴らしいご指導を行なって下さった清雄一教授，田原康之准教授
+に心より深く感謝を申し上げます．また，日頃よりコミュニケーション
+をとり親切にしていただいた研究室の皆様，実験に参加して下さった
+友人，そして
+電気通信大学で学ぶ貴重な機会を与え，温かく見守ってくださった両親に
+感謝の意を表します．
+
+本実験は電気通信大学倫理審査会の承認を受けており(管理番号: H24053)，
+各被験者から同意の署名を得ました．
+\newpage
+
+\appendix
+\addcontentsline{toc}{chapter}{付録A}
+\chapter*{付録A アニメーション一覧}
+\thispagestyle{fancy}
+\lhead{\leftmark}
+\rhead{\thepage}
+\markboth{付録A アニメーション一覧}{付録A} % ヘッダー用に付録タイトルを設定
+
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\thefigure}{A.\arabic{figure}} % 図番号を A.1 の形式に設定
+
+
+
+
+%\section*{Playerアニメーション}
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Attack1.png}
+    \caption{Attack1，WeakAttack1}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Attack2_rolling.png}
+    \caption{Attack2，RollingAttack，WeakAttack2}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/GuardBreak.png}
+    \caption{GuardBreak}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Rolling.png}
+    \caption{Rolling}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/BackStep.png}
+    \caption{BackStep}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Heal.png}
+    \caption{Heal}
+    \label{}
+  \end{center}
+\end{figure}
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Attack3.png}
+    \caption{WeakAttack3}
+    \label{}
+  \end{center}
+\end{figure}
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Attack4.png}
+    \caption{WeakAttack4}
+    \label{}
+  \end{center}
+\end{figure}
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/Attack5.png}
+    \caption{WeakAttack5}
+    \label{}
+  \end{center}
+\end{figure}
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/SuddenApproach.png}
+    \caption{StrongAttack1，RushAttack}
+    \label{}
+  \end{center}
+\end{figure}
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/BossAttack1.png}
+    \caption{StrongAttack2}
+    \label{}
+  \end{center}
+\end{figure}
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=13cm]{FrameImage/ShootWeapon.png}
+    \caption{ShootAttack}
+    \label{}
+  \end{center}
+\end{figure}
+
+
+
 
 \newpage
 
@@ -724,19 +978,35 @@ AIの研究\cite{morita}\cite{tutii}
 
 \bibitem{darksouls} DARKSOULS https://www.darksouls.jp
 \bibitem{niou} 仁王 https://www.gamecity.ne.jp/nioh/
-\bibitem{dif-action} 荒木 海斗，三上 浩司，兼松 祥央，松吉 俊，
-高難易度アクションゲームにおけるプレイヤー
-に気づかれにくい難易度調整手法，
-エンタテインメントコンピューティングシンポジウム(EC2023)，
-2023．
-
 
 \bibitem{FuJi_en} N. FUjii，Y. Sato，H. Wakama，K. Kazai and H. Katayose，
 Proc. ACE, LNCS, vol. 8253, pp. 61-76，
 Evaluating Human-like Behaviors of Video-Game Agents Autonomously Acquired with Biological Constraints，
 2013．
 
-\bibitem{stress}
+\bibitem{dif-action} 荒木 海斗，三上 浩司，兼松 祥央，松吉 俊，
+高難易度アクションゲームにおけるプレイヤー
+に気づかれにくい難易度調整手法，
+エンタテインメントコンピューティングシンポジウム(EC2023)，
+2023．
+
+%ここから3章
+\bibitem{unity} Unity https://unity.com
+\bibitem{AnimRigging} Animation Rigging\\
+https://docs.unity3d.com/ja/Packages/com.unity.animation.rigging@1.2
+
+\bibitem{stress} 長谷川 弓子，矢野 円郁，小山 哲，猪俣 公宏，
+プレッシャー下のゴルフパッティングパフォーマンス：
+不安の強度とパッティング距離の影響，
+スポーツ心理学研究，2011年38巻p.85-98.
+%https://www.jstage.jst.go.jp/article/jjspopsy/38/2/38_2011-084/_article/-char/ja
+
+\bibitem{hoyuu}大橋賢裕，保有効果を測るアンケート実験について，
+経済集志，第90巻第1号，2020.
+%https://drive.google.com/file/d/1yGWSp4jY-YkjWIKPpfEa-4f2VOMvZexX/view
+\bibitem{fam_kouryaku}ファミ通，「エルデンリング」攻略／初心者向けバトル解説．
+基本システムやテクニックを学んで，強敵たちに立ち向かおう！2022.
+https://www.famitsu.com/news/202202/25252510.html
 
 \end{thebibliography}
 
@@ -749,6 +1019,16 @@ Evaluating Human-like Behaviors of Video-Game Agents Autonomously Acquired with 
 \rhead{\thepage}
 \renewcommand{\headrulewidth}{1pt}
  \section*{研究会}
- 氏名, 清 雄一, 田原 康之, 大須賀 昭彦: タイトル,  学会名, 2023
+ 長内 勇輝, 清 雄一, 田原 康之: 
+ 高難易度アクションゲームにおける人間らしいAI,  
+ DEIM2025 第17回データ工学と情報マネジメントに関するフォーラム,
+2025で発表予定
+
+\newpage
+
+
+
+
+
 
 \end{document}
